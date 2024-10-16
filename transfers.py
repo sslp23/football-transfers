@@ -50,14 +50,21 @@ def parse_transfer_table(team_in, left=False):
 def get_transfer(league_code, seasons):
     base_link = f'https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/{league_code}/plus/?saison_id='
 
-    for s in seasons:
-        full_link = base_link+str(s)+'&s_w=s&leihe=3&intern=0&intern=1'
+    seasons_df = pd.DataFrame()
+    for s in (seasons):
+        full_link = base_link+str(s)+'&s_w=&leihe=3&intern=0&intern=1'
         print(full_link)
-        
-        response = requests.get(full_link, headers=headers)
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        all_transfers = soup.find('div', {'class': 'large-8 columns'}).find_all("div", {"class": "box"})[3:]
+        passed = False
+        while not passed:
+            response = requests.get(full_link, headers=headers)
+            soup = BeautifulSoup(response.content, "html.parser")
+            try:
+                all_transfers = soup.find('div', {'class': 'large-8 columns'}).find_all("div", {"class": "box"})[3:]
+                passed = True
+            except:
+                passed = False
+                print('trying again...')
+                time.sleep(5)
         all_teams_df = pd.DataFrame()
         
         for transf in all_transfers:
@@ -79,6 +86,7 @@ def get_transfer(league_code, seasons):
             
         season_name = float(str(s)+str(s+1)[-2:])
         all_teams_df['SEASON'] = [season_name]*len(all_teams_df)
+        seasons_df = pd.concat([seasons_df, all_teams_df])
     return all_teams_df
             
 

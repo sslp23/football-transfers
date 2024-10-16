@@ -87,7 +87,8 @@ def get_transfer(league_code, seasons):
         season_name = float(str(s)+str(s+1)[-2:])
         all_teams_df['SEASON'] = [season_name]*len(all_teams_df)
         seasons_df = pd.concat([seasons_df, all_teams_df])
-    return all_teams_df
+        
+    return seasons_df
             
 
 def main():

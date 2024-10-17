@@ -24,3 +24,4 @@ python <file_name.py> <parameter>
 
 ### Examples
 python squads.py: update the teams for current season.
+```

@@ -54,6 +54,7 @@ def find_squad_stats(als):
     link = als[1]
     season = link[-4:] + "-" + str(int(link[-2:])+1)
     url = link
+    #print(url)
     response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, "html.parser")
     
@@ -168,8 +169,8 @@ def main():
         base_df = pd.concat([base_df, all_teams])
 
     if mode == 'update':
-        old_df = pd.read_data('data/players_infos.csv')
-        old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
+        old_df = pd.read_csv('data/players_infos.csv')
+        old_df = old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
         base_df = pd.concat([old_df, base_df])
     base_df.to_csv('data/players_infos.csv', index=False)
 

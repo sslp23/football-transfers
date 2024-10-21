@@ -106,7 +106,7 @@ def main():
         leagues_df = pd.concat([leagues_df, a])
         
     if mode == 'update':
-        old_df = pd.read_data('data/full_transfers.csv')
+        old_df = pd.read_csv('data/full_transfers.csv')
         old_df[old_df.SEASON != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
         base_df = pd.concat([old_df, base_df])
     leagues_df.to_csv('data/full_transfers.csv', index=False)

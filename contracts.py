@@ -113,7 +113,7 @@ def main():
         base_df = pd.concat([base_df, all_teams])
     
     if mode == 'update':
-        old_df = pd.read_data('data/contract_agents_info.csv')
+        old_df = pd.read_csv('data/contract_agents_info.csv')
         old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
         base_df = pd.concat([old_df, base_df])
     base_df.to_csv('data/contract_agents_info.csv', index=False)

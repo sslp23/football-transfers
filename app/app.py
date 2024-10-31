@@ -2,6 +2,62 @@ import streamlit as st
 import pandas as pd
 from tqdm import tqdm
 
+import matplotlib.pyplot as plt
+from mplsoccer import Pitch
+from matplotlib.patches import Rectangle
+from io import BytesIO
+
+def heatmap_maker(ideal):
+    
+    # Set up the pitch with a white background and no padding
+    pitch = Pitch(
+        pitch_type='statsbomb', 
+        pitch_color='white', 
+        line_color='grey', 
+        line_zorder=1,  # Pitch lines appear above the grid
+        pad_top=0, 
+        pad_bottom=0, 
+        pad_left=0, 
+        pad_right=0
+    )
+    fig, ax = pitch.draw(figsize=(10, 7))
+
+    # Define grid dimensions
+    num_rows, num_cols = 5, 6
+    pitch_length, pitch_width = 120, 80
+
+    df_pos = pd.DataFrame([('GK', [(3, 1)]), ('CB', [(2, 2), (3, 2), (4, 2)]), ('RB', [(5, 2)]), ('LB', [(1, 2)]), ('DM', [(2, 3), (3, 3), (4, 3)]), ('CM', [(2, 4), (3, 4), (4, 4)]), ('LM', []), ('RM', []), ('RW', [(5, 5), (5, 4)]), ('LW', [(1, 4), (1, 5)]), ('ST', [(2, 5), (3, 5), (4, 5), (2, 6), (3, 6), (4, 6)])], columns = ['Position', 'Local'])
+
+    # Plot vertical and horizontal lines to create a 5x6 grid with light grey lines
+    for i in range(1, num_rows):
+        pitch.lines(0, i * 80 / num_rows, 120, i * 80 / num_rows, lw=2, color="lightgrey", ax=ax)
+    for j in range(1, num_cols):
+        pitch.lines(j * 120 / num_cols, 0, j * 120 / num_cols, 80, lw=2, color="lightgrey", ax=ax)
+
+    df_pos = df_pos.merge(ideal[['Position', 'Difference']], how='left', on='Position')
+    # Display the pitch with the customized grid
+    for i, vals in df_pos.iterrows():
+        for local in vals['Local']:
+            zone_row, zone_col = local[0], local[1]
+            zone_center_x = (zone_col - 0.5) * (pitch_length / num_cols)
+            zone_center_y = (zone_row - 0.5) * (pitch_width / num_rows)
+            ax.text(zone_center_x, zone_center_y, vals['Position'], ha="center", va="center", fontsize=14, color="black")
+            
+            if vals['Difference']<0:
+                color = 'red'
+            elif vals['Difference']>0:
+                color = 'green'
+            else:
+                color = 'white'
+            zone_x = (zone_col - 1) * (pitch_length / num_cols)  # Left edge of the zone
+            zone_y = (zone_row - 1) * (pitch_width / num_rows)   # Bottom edge of the zone
+            zone_width = pitch_length / num_cols
+            zone_height = pitch_width / num_rows
+            ax.add_patch(Rectangle((zone_x, zone_y), zone_width, zone_height, color=color, alpha=0.3, zorder=0))
+
+    return fig
+
+
 def find_cap(s):
     pos = ''.join([char for char in s if char.isupper()])
     if pos == 'G':
@@ -76,6 +132,12 @@ def get_team_info(df, team, season):
     teams_df_info = teams_df_info.merge(res_df_full, how='left', on=['TEAM_ID', 'Season'])
     return teams_df_info
 
+
+
+def render_img_html(image_b64):
+        st.markdown(f"<img style='max-width: 100%;max-height: 100%;' src='data:image/png;base64, {image_b64}'/>",
+                    unsafe_allow_html=True)
+
 if __name__=='__main__':
     # Load the data
     df = pd.read_csv('../data/players_infos.csv')
@@ -118,11 +180,22 @@ if __name__=='__main__':
     final_df['Position'] = [a.split('_')[0] for a in final_df.Position]
 
     final_df = final_df[['Ideal', 'Current', 'Team', 'Season', 'Position']].set_index('Position')
+    final_df['Difference'] = final_df['Current'] - final_df['Ideal']
+    
+    hmap = heatmap_maker(final_df.reset_index())
     #backup_df = backup_df[(backup_df.Team == team) & (backup_df.Season == season)]
     # Filter the dataframe
     #filtered_df = df[(df['Season'] == season) & (df['Team'] == team)]
 
     # Display the filtered dataframe
     
-    st.subheader("Squad Stats")
-    st.dataframe(final_df)
+    #st.subheader("Squad Stats")
+    st.markdown(f"<h2 style='text-align: center;'>{team} - {season}</h2>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.dataframe(final_df)
+    with col2:
+        buf = BytesIO()
+        hmap.savefig(buf, format="png")
+        buf.seek(0)
+        st.image(buf, caption="Position's heatmap")

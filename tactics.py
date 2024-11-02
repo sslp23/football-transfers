@@ -31,7 +31,7 @@ def main():
     target_teams = df[['Season', 'TEAM_ID', 'Team', 'League']].drop_duplicates()
 
     how = sys.argv[1]
-    cur_season = 202425.0
+    cur_season = '2024-25'
 
     if how == 'update':
         target_teams = target_teams[target_teams.Season == cur_season]

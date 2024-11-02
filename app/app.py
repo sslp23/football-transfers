@@ -65,12 +65,12 @@ def find_cap(s):
     return pos
 
 def get_team_info(df, team, season):
-    tactics = pd.read_csv('../data/tactical_systems copy.csv')
+    tactics = pd.read_csv('../data/tactical_systems.csv')
     
     teams_df = df[['Season', 'TEAM_ID', 'Team', 'League']]
     
-    tactics['Season'] = tactics.Season.astype(int).astype(str)
-    tactics.Season = tactics.Season.apply(lambda x: x[:4]+'-'+x[4:])
+    #tactics['Season'] = tactics.Season.astype(int).astype(str)
+    #tactics.Season = tactics.Season.apply(lambda x: x[:4]+'-'+x[4:])
 
     teams_df = teams_df.merge(tactics[['Coach', 'Most Used System', 'Season', 'Team_ID']], how='left', left_on=['Season', 'TEAM_ID'], right_on=['Season', 'Team_ID']).drop('Team_ID', axis=1)
 
@@ -148,11 +148,25 @@ if __name__=='__main__':
     # Title
     st.sidebar.title("Transfers Overview")
 
-    df['Season'] = df.Season.astype(int).astype(str)
-    df.Season = df.Season.apply(lambda x: x[:4]+'-'+x[4:])
+    #df['Season'] = df.Season.astype(int).astype(str)
+    #df.Season = df.Season.apply(lambda x: x[:4]+'-'+x[4:])
     # Sidebar filters
+    leagues_dict = {
+        'GB1': 'Premier League',
+        'L1': 'Bundesliga',
+        'PO1': 'Primeira Liga',
+        'FR1': 'Ligue 1',
+        'IT1': 'Serie A',
+        'ES1': 'La Liga',
+        'TR1': 'Süper Lig',
+        'NL1': 'Eredivisie',
+        'BE1': 'Jupiler Pro League',
+        'TS1': 'Czech League'
+    }
+    df['League'] = df['League'].replace(leagues_dict)
     season = st.sidebar.selectbox("Select Season", df['Season'].unique().tolist()[::-1])
-    team = st.sidebar.selectbox("Select Team", df[df['Season'] == season]['Team'].unique())
+    league = st.sidebar.selectbox("Select League", df[df['Season'] == season]['League'].unique())
+    team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
     #option = st.sidebar.selectbox("Select Option", ["ideal", "current", "difference"])
 
     teams_df_info = get_team_info(df, team=team, season=season)

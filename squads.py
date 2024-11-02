@@ -117,15 +117,17 @@ def find_squad_stats(als):
             
     all_p_df = pd.DataFrame(all_p, columns=["Season", "Team", "#", "Link" , 'PLAYER_ID', "Player Name", "Position", "Age", "Appearences", "Played Games", "Goals", "Assists", "Yellow", "Second Yellow", "Red", "Come From Bench", "Substituted", "PPG", "Minute Played"])
     
-    for c in all_p_df.columns.values:#[7:]:
+    for c in all_p_df.columns.values[7:]:#[7:]:
         all_p_df[c] = all_p_df[c].replace("Not in squad during this season", "0")
         all_p_df[c] = all_p_df[c].replace("Not used during this season", "0")
         all_p_df[c] = all_p_df[c].replace("-", "0")
         
         if all_p_df[c].dtype == object:
             all_p_df[c] = all_p_df[c].str.replace("'", "")
-            all_p_df[c] = all_p_df[c].str.replace(",", ".")
-            #all_p_df[c] = all_p_df[c].str.replace(".", "", regex=True)
+            #all_p_df[c] = all_p_df[c].str.replace(",", ".")
+            if c=='Minute Played':
+                all_p_df[c] = all_p_df[c].str.replace(".", "",regex=True)
+
             all_p_df[c] = all_p_df[c].str.replace("-", "")
             all_p_df[c] = all_p_df[c].str.replace("†", "")
         
@@ -148,7 +150,7 @@ def main():
     if mode == 'update':
         seasons = seasons[-1:]
 
-    leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1']
+    leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")

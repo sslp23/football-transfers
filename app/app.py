@@ -66,7 +66,7 @@ def find_cap(s):
     return pos
 
 def get_team_info(df, team, season):
-    tactics = pd.read_csv('../data/tactical_systems.csv')
+    tactics = pd.read_csv('data/tactical_systems.csv')
     
     teams_df = df[['Season', 'TEAM_ID', 'Team', 'League']]
     
@@ -88,7 +88,7 @@ def get_team_info(df, team, season):
         ly_tactics.append(last_year_tactics)
     
     teams_df_train['LAST_YEAR_TACTICS'] = ly_tactics
-    tactics_pos = pd.read_csv('../data/Target Score Chart - MPT.csv')
+    tactics_pos = pd.read_csv('data/Target Score Chart - MPT.csv')
     tactics_pos = tactics_pos.iloc[:, 1:]
     tactics_pos.columns = [a.strip() for a in tactics_pos.iloc[0].values] 
     tactics_pos = tactics_pos.iloc[1:]
@@ -141,7 +141,7 @@ def transfer_type(x):
         return 'Paid'
 
 def get_htb(position, team, season):
-    transfers = pd.read_csv('../data/full_transfers.csv')
+    transfers = pd.read_csv('data/full_transfers.csv')
     transfers['POS_CODE'] = transfers.POSITION.apply(lambda x: find_cap(x))
     transfers.POS_CODE = transfers.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
     transfers.POS_CODE = transfers.POS_CODE.str.replace('AM', 'CM')
@@ -200,7 +200,7 @@ def render_img_html(image_b64):
 
 if __name__=='__main__':
     # Load the data
-    df = pd.read_csv('../data/players_infos.csv')
+    df = pd.read_csv('data/players_infos.csv')
 
     # Configure the dashboard
     st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")

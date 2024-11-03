@@ -276,6 +276,7 @@ if __name__=='__main__':
         st.image(buf, caption="Position's heatmap")
 
     st.markdown(f"<h2 style='text-align: center;'>Historical Transfers Behavior</h2>", unsafe_allow_html=True)
+    df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
     position = st.selectbox('Position', df.POS_CODE.unique())
 
     htb = get_htb(position, team_id, season)

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from mplsoccer import Pitch
 from matplotlib.patches import Rectangle
 from io import BytesIO
+import plotly.express as px
 
 def heatmap_maker(ideal):
     
@@ -116,7 +117,7 @@ def get_team_info(df, team, season):
     df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
 
     res_df_full = pd.DataFrame()
-    for i, vals in tqdm(teams_df_info.iterrows()):
+    for i, vals in (teams_df_info.iterrows()):
         sub_df = df[(df.TEAM_ID == vals['TEAM_ID']) & (df.Season ==  vals['Season'])]
         
         res_df = pd.pivot_table(sub_df.groupby('POS_CODE').size().to_frame('current_pos_count').reset_index(), columns = 'POS_CODE', values='current_pos_count')
@@ -128,15 +129,74 @@ def get_team_info(df, team, season):
 
     res_df_full = res_df_full.fillna(0)
 
-    print(res_df_full)
     teams_df_info = teams_df_info.merge(res_df_full, how='left', on=['TEAM_ID', 'Season'])
     return teams_df_info
 
+def transfer_type(x):
+    if 'loan transfer' in x or 'Loan fee' in x:
+        return 'Loan'
+    elif 'free transfer' in x:
+        return 'Free'
+    else:
+        return 'Paid'
 
+def get_htb(position, team, season):
+    transfers = pd.read_csv('../data/full_transfers.csv')
+    transfers['POS_CODE'] = transfers.POSITION.apply(lambda x: find_cap(x))
+    transfers.POS_CODE = transfers.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
+    transfers.POS_CODE = transfers.POS_CODE.str.replace('AM', 'CM')
+    transfers = transfers[~transfers.POS_CODE.isin(['A', 'D', 'M'])]
+
+    #season = float(season[:4]+season[5:])
+
+    int_transfer = transfers[(transfers.SEASON <= season) & (transfers.TEAM_JOINED_ID == team) & (transfers.POS_CODE == position)]
+    
+    sel_transfer = int_transfer[['PLAYER_NAME', 'AGE', 'FEE', 'POS_CODE', 'SEASON']].sort_values('SEASON')
+    sel_transfer = sel_transfer[~sel_transfer.FEE.str.contains('End of loan')].drop_duplicates().reset_index(drop=True)
+    sel_transfer = sel_transfer[sel_transfer.FEE!= '-']
+    sel_transfer['TRANSFER_TYPE'] = sel_transfer.FEE.apply(lambda x: transfer_type(x))
+    return sel_transfer
+
+def htb_donut_chart(htb):
+    transfer_summary = htb.groupby('TRANSFER_TYPE').agg(
+            Count=('TRANSFER_TYPE', 'size'),
+            Players=('PLAYER_NAME', lambda names: ',<br>'.join(
+                f"{name} ({season})" for name, season in zip(names, htb.loc[names.index, 'SEASON'])
+            ))
+        ).reset_index()
+
+    total_transfers = transfer_summary['Count'].sum()
+
+    fig = px.pie(
+        transfer_summary,
+        names='TRANSFER_TYPE',
+        values='Count',
+        hole=0.4  # Adjust the size of the inner white circle (0.4 for 40% hole)
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>%{label}</b><br>Transfers: %{value}<br>Players: %{customdata[0]}",
+        customdata=transfer_summary[['Players']].values  # Pass player names as custom data
+    )
+
+    # Customize the chart layout
+    fig.update_layout(
+        title="Transfer Type Distribution",
+        showlegend=True,
+        annotations=[
+        dict(
+            text=f"{total_transfers}<br>Transfers",  # Display total and label
+            x=0.5, y=0.5,
+            font_size=20, showarrow=False
+        )
+        ]
+    )
+    return fig
 
 def render_img_html(image_b64):
         st.markdown(f"<img style='max-width: 100%;max-height: 100%;' src='data:image/png;base64, {image_b64}'/>",
                     unsafe_allow_html=True)
+
 
 if __name__=='__main__':
     # Load the data
@@ -170,6 +230,7 @@ if __name__=='__main__':
     #option = st.sidebar.selectbox("Select Option", ["ideal", "current", "difference"])
 
     teams_df_info = get_team_info(df, team=team, season=season)
+    team_id = teams_df_info.TEAM_ID.values[-1]
     base_cols = ['Season', 'Team']
     backup_df = teams_df_info[(teams_df_info.Team == team) & (teams_df_info.Season == season)]
 
@@ -213,3 +274,15 @@ if __name__=='__main__':
         hmap.savefig(buf, format="png")
         buf.seek(0)
         st.image(buf, caption="Position's heatmap")
+
+    st.markdown(f"<h2 style='text-align: center;'>Historical Transfers Behavior</h2>", unsafe_allow_html=True)
+    position = st.selectbox('Position', df.POS_CODE.unique())
+
+    htb = get_htb(position, team_id, season)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.dataframe(htb)
+    with col2:
+        fig = htb_donut_chart(htb)
+        st.plotly_chart(fig, use_container_width=True)
+    #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())

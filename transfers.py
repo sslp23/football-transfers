@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 from io import StringIO
+import time
 import sys
 headers = {"User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"}
 
@@ -83,8 +84,10 @@ def get_transfer(league_code, seasons):
             team_in_df['TEAM_JOINED'] = [team_name]*len(team_in_df)
             team_df = pd.concat([team_in_df, team_out_df]).reset_index(drop=True)
             all_teams_df = pd.concat([all_teams_df, team_df])
-            
-        season_name = float(str(s)+str(s+1)[-2:])
+        
+        
+        
+        season_name = str(s)+'-'+str(s+1)[-2:]
         all_teams_df['SEASON'] = [season_name]*len(all_teams_df)
         seasons_df = pd.concat([seasons_df, all_teams_df])
         

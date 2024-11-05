@@ -48,13 +48,19 @@ def get_links(league_code, seasons):
         all_urls += (links) 
     return all_urls
 
+def parse_link_full(link):
+    league_name = link.split('=')[1].split('%')[0]
+    link = link.replace(league_name, '')
+    return link
+
 #stats from squad
 def find_squad_stats(als):
     team = als[0]
     link = als[1]
     season = link[-4:] + "-" + str(int(link[-2:])+1)
-    url = link
-    #print(url)
+    new_link = parse_link_full(link)
+    url = new_link
+    
     response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, "html.parser")
     

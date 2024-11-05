@@ -7,6 +7,7 @@ from mplsoccer import Pitch
 from matplotlib.patches import Rectangle
 from io import BytesIO
 import plotly.express as px
+import numpy as np
 
 def heatmap_maker(ideal):
     
@@ -151,7 +152,7 @@ def get_htb(position, team, season):
 
     int_transfer = transfers[(transfers.SEASON <= season) & (transfers.TEAM_JOINED_ID == team) & (transfers.POS_CODE == position)]
     
-    sel_transfer = int_transfer[['PLAYER_NAME', 'AGE', 'FEE', 'POS_CODE', 'SEASON']].sort_values('SEASON')
+    sel_transfer = int_transfer[['PLAYER_NAME', 'AGE', 'FEE', 'POS_CODE', 'SEASON', 'TEAM_LEFT_ID', 'PLAYER_ID']].sort_values('SEASON')
     sel_transfer = sel_transfer[~sel_transfer.FEE.str.contains('End of loan')].drop_duplicates().reset_index(drop=True)
     sel_transfer = sel_transfer[sel_transfer.FEE!= '-']
     sel_transfer['TRANSFER_TYPE'] = sel_transfer.FEE.apply(lambda x: transfer_type(x))
@@ -196,6 +197,27 @@ def htb_donut_chart(htb):
 def render_img_html(image_b64):
         st.markdown(f"<img style='max-width: 100%;max-height: 100%;' src='data:image/png;base64, {image_b64}'/>",
                     unsafe_allow_html=True)
+
+def get_overview_htb(htb):
+    htb.FEE = htb.FEE.apply(lambda x: x.replace('€', '').replace('m', ''))
+    htb['FEE'] = pd.to_numeric(htb.FEE, errors='coerce')
+    htb['AGE'] = pd.to_numeric(htb.AGE, errors='coerce')
+    ft = htb.groupby('POS_CODE').apply(lambda x: pd.Series({
+        'Avg Fee': x['FEE'].mean(),
+        'Avg Age': x['AGE'].mean(),
+        'Avg Past Season Goals': x['Past Season Goals'].mean(),
+        'Most Common Leagues': ', '.join(x['League'].mode().values)
+    }))
+    return ft#.groupby()
+
+def get_past_season_goals(player, season, df):
+    past_season = (str(int(season[:4])-1))+'-'+str(int(season[5:])-1)
+    goals_list = df[(df.PLAYER_ID  == player) & (df.Season == past_season)]['Goals']
+    if len(goals_list) > 0:
+        return goals_list.values[0]
+    else:
+        return np.nan
+    #df[df.past_season
 
 
 if __name__=='__main__':
@@ -280,9 +302,20 @@ if __name__=='__main__':
     position = st.selectbox('Position', df.POS_CODE.unique())
 
     htb = get_htb(position, team_id, season)
+    team_infos = df[['TEAM_ID', 'League', 'Season']]
+    htb = htb.merge(team_infos, how='left', left_on=['TEAM_LEFT_ID', 'SEASON'], right_on=['TEAM_ID', 'Season'])
+
+    htb['Past Season Goals'] = htb.apply(lambda x: get_past_season_goals(x['PLAYER_ID'], x['SEASON'], df), axis=1)
+    htb.drop(['Season', 'TEAM_LEFT_ID', 'TEAM_ID', 'PLAYER_ID'], axis=1, inplace=True)
+    htb = htb.drop_duplicates()
     col1, col2 = st.columns(2)
     with col1:
+        st.caption("Signed players")
         st.dataframe(htb)
+        st.caption("Bought players overview")
+        overview_htb = get_overview_htb(htb)
+        st.dataframe(overview_htb)
+        
     with col2:
         fig = htb_donut_chart(htb)
         st.plotly_chart(fig, use_container_width=True)

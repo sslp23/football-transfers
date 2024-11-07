@@ -8,6 +8,7 @@ from matplotlib.patches import Rectangle
 from io import BytesIO
 import plotly.express as px
 import numpy as np
+import time
 
 def heatmap_maker(ideal):
     
@@ -95,6 +96,8 @@ def get_team_info(df, team, season):
     tactics_pos = tactics_pos.iloc[1:]
 
     tactics_pos['Formation'] = tactics_pos.Formation.str.split(' ').str[0]
+    tactics_pos['Ideal Number'] = tactics_pos['Ideal Number'].astype(float)
+    #time.sleep(102039)
     tactics_df = pd.pivot_table(tactics_pos, index='Formation', columns='Position', values='Ideal Number')
     cor_order = ['GK', 'CB', 'RB', 'LB', 'DM', 'CM', 'LM', 'RM', 'RW', 'LW', 'ST']
     tactics_df = tactics_df[cor_order]
@@ -207,7 +210,7 @@ def get_overview_htb(htb):
         'Avg Age': x['AGE'].mean(),
         'Avg Past Season Goals': x['Past Season Goals'].mean(),
         'Most Common Leagues': ', '.join(x['League'].mode().values)
-    }))
+    }), include_groups=False)[['Avg Fee', 'Avg Age', 'Avg Past Season Goals', 'Most Common Leagues']]
     return ft#.groupby()
 
 def get_past_season_goals(player, season, df):

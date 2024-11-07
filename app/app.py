@@ -248,9 +248,10 @@ if __name__=='__main__':
         'BE1': 'Jupiler Pro League',
         'TS1': 'Czech League'
     }
+    
     df['League'] = df['League'].replace(leagues_dict)
     season = st.sidebar.selectbox("Select Season", df['Season'].unique().tolist()[::-1])
-    league = st.sidebar.selectbox("Select League", df[df['Season'] == season]['League'].unique())
+    league = st.sidebar.selectbox("Select League", df[(df.League.isin(leagues_dict.values())) & (df.Season == season)].League.unique())
     team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
     #option = st.sidebar.selectbox("Select Option", ["ideal", "current", "difference"])
 

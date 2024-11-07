@@ -155,8 +155,8 @@ def main():
     mode = sys.argv[1]
     if mode == 'update':
         seasons = seasons[-1:]
-
-    leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
+        
+    leagues = ['GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']#['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")
@@ -179,6 +179,10 @@ def main():
     if mode == 'update':
         old_df = pd.read_csv('data/players_infos.csv')
         old_df = old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
+        base_df = pd.concat([old_df, base_df])
+    if mode == 'new_leagues':
+        old_df = pd.read_csv('data/players_infos.csv')
+        #old_df = old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
         base_df = pd.concat([old_df, base_df])
     base_df.to_csv('data/players_infos.csv', index=False)
 

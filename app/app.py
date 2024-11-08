@@ -9,7 +9,33 @@ from io import BytesIO
 import plotly.express as px
 import numpy as np
 import time
+from matplotlib import colors
 
+def calculate_signing_score(ideal_num_players, num_players, players_leaving, w1=1.0, w2=0.75):
+    # Calculate the factors
+    if ideal_num_players == 0:
+        return 0  # or an alternative score, depending on the context
+
+    # Calculate the factors
+    player_gap = (num_players - ideal_num_players) / ideal_num_players
+    leaving_factor = players_leaving / ideal_num_players
+
+    # Calculate the raw score
+    raw_score = w1 * player_gap + w2 * leaving_factor
+
+    # Apply sigmoid to constrain the score between 0 and 1
+    signing_score = 1 / (1 + np.exp(raw_score))
+    return signing_score
+
+def psi_to_color(psi):
+    # Interpolate colors between red, white, and green based on PSI
+    if psi < 0.5:
+        return colors.to_hex((1 - psi * 2, 1, 1 - psi * 2))  # Green -> White
+    elif psi > 0.5:
+        return colors.to_hex((1, 1 - (psi - 0.4) * 2, 1 - (psi - 0.4) * 2))  # White -> Red
+    else:
+        return colors.to_hex((1, 1 - (psi - 0.5) * 2, 1 - (psi - 0.5) * 2))  # White 
+    
 def heatmap_maker(ideal):
     
     # Set up the pitch with a white background and no padding
@@ -37,7 +63,7 @@ def heatmap_maker(ideal):
     for j in range(1, num_cols):
         pitch.lines(j * 120 / num_cols, 0, j * 120 / num_cols, 80, lw=2, color="lightgrey", ax=ax)
 
-    df_pos = df_pos.merge(ideal[['Position', 'Difference']], how='left', on='Position')
+    df_pos = df_pos.merge(ideal[['Position', 'PSI']], how='left', on='Position')
     # Display the pitch with the customized grid
     for i, vals in df_pos.iterrows():
         for local in vals['Local']:
@@ -46,12 +72,7 @@ def heatmap_maker(ideal):
             zone_center_y = (zone_row - 0.5) * (pitch_width / num_rows)
             ax.text(zone_center_x, zone_center_y, vals['Position'], ha="center", va="center", fontsize=14, color="black")
             
-            if vals['Difference']<0:
-                color = 'red'
-            elif vals['Difference']>0:
-                color = 'green'
-            else:
-                color = 'white'
+            color = psi_to_color(vals['PSI'])
             zone_x = (zone_col - 1) * (pitch_length / num_cols)  # Left edge of the zone
             zone_y = (zone_row - 1) * (pitch_width / num_rows)   # Bottom edge of the zone
             zone_width = pitch_length / num_cols
@@ -67,16 +88,36 @@ def find_cap(s):
         pos = 'GK'
     return pos
 
+def difference_in_years(x):
+    # Ensure x is a pandas datetime
+    if pd.isna(x):
+        return 0
+    
+    # Calculate difference in years
+    today = pd.Timestamp.today()
+    print(today)
+    difference_in_years = (x - today) / pd.Timedelta(days=365.25)  # Accounting for leap years
+    
+    # Return 1 if difference is less than 1 year, else 0
+    return 1 if difference_in_years < 1 else 0
+
 def get_team_info(df, team, season):
     tactics = pd.read_csv('data/tactical_systems.csv')
-    
-    teams_df = df[['Season', 'TEAM_ID', 'Team', 'League']]
+    contracts  = pd.read_csv('data/contract_agents_info.csv')
+    contracts['Season'] = ['2024-25']*len(contracts)
+
+    df = df.merge(contracts[['Player_ID','Season', 'Expires']], how='left', left_on=['PLAYER_ID', 'Season'], right_on=['Player_ID', 'Season'])
+    df['Expires'] = df['Expires'].replace('-',None)
+    df['Expires'] = pd.to_datetime(df['Expires'])
+    df['Expiring'] = df['Expires'].apply(lambda x: difference_in_years(x))
+
+    teams_df = df[['Season', 'TEAM_ID', 'Team', 'League', 'Expires','Expiring', 'POS_CODE']]
     
     #tactics['Season'] = tactics.Season.astype(int).astype(str)
     #tactics.Season = tactics.Season.apply(lambda x: x[:4]+'-'+x[4:])
 
     teams_df = teams_df.merge(tactics[['Coach', 'Most Used System', 'Season', 'Team_ID']], how='left', left_on=['Season', 'TEAM_ID'], right_on=['Season', 'Team_ID']).drop('Team_ID', axis=1)
-
+    
     teams_df_train = teams_df[(teams_df.Season == season) & (teams_df.Team == team)]#[teams_df.Season>'201718']
     teams_df_train = (teams_df_train.drop_duplicates())
     ly_tactics = []
@@ -111,6 +152,7 @@ def get_team_info(df, team, season):
     teams_df_train['LAST_YEAR_TACTICS'] = [str(a).split("'")[-2] if '[' in a else a for a in teams_df_train['LAST_YEAR_TACTICS'].values]
     teams_df_train['LAST_YEAR_TACTICS'] = teams_df_train['LAST_YEAR_TACTICS'].str.split(' ').str[0]
 
+    
     tactics_df.columns = [a+'_ideal' if len(a) == 2 else a for a in tactics_df.columns.values]
 
     teams_df_info = teams_df_train.merge(tactics_df, how='left', left_on = 'LAST_YEAR_TACTICS', right_on = 'Formation', suffixes=['', '_ideal'])
@@ -132,7 +174,7 @@ def get_team_info(df, team, season):
         res_df_full = pd.concat([res_df_full, res_df])
 
     res_df_full = res_df_full.fillna(0)
-
+    
     teams_df_info = teams_df_info.merge(res_df_full, how='left', on=['TEAM_ID', 'Season'])
     return teams_df_info
 
@@ -226,6 +268,10 @@ def get_past_season_goals(player, season, df):
 if __name__=='__main__':
     # Load the data
     df = pd.read_csv('data/players_infos.csv')
+    df['POS_CODE'] = df.Position.apply(lambda x: find_cap(x))
+    df.POS_CODE = df.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
+    df.POS_CODE = df.POS_CODE.str.replace('AM', 'CM')
+    df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
 
     # Configure the dashboard
     st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")
@@ -272,6 +318,11 @@ if __name__=='__main__':
     df_current['positions'] = positions_current
     final_df = df_ideal.merge(df_current, how='left', on='positions')
     
+    expiring_players = teams_df_info.drop_duplicates().groupby('POS_CODE')['Expiring'].sum()
+    expiring_players = expiring_players.to_frame('Expiring Contract').reset_index()
+    expiring_players.columns = ['Position', 'Expiring Contract']
+    
+    
     
     final_df = final_df.fillna(0)
     final_df = final_df.iloc[:,[0, 1, -1]]
@@ -279,10 +330,13 @@ if __name__=='__main__':
     final_df['Team'] = [team]*len(final_df)
     final_df['Season'] = [season]*len(final_df)
     final_df['Position'] = [a.split('_')[0] for a in final_df.Position]
-
-    final_df = final_df[['Ideal', 'Current', 'Team', 'Season', 'Position']].set_index('Position')
+    
+    final_df = final_df.merge(expiring_players, how='left', on='Position')
+    final_df['Expiring Contract'] = final_df['Expiring Contract'].fillna(0)
+    final_df = final_df[['Ideal', 'Current', 'Expiring Contract', 'Team', 'Season', 'Position']].set_index('Position')
     final_df['Difference'] = final_df['Current'] - final_df['Ideal']
     
+    final_df['PSI'] = final_df.apply(lambda x: calculate_signing_score(x['Ideal'], x['Current'], x['Expiring Contract']), axis=1)
     hmap = heatmap_maker(final_df.reset_index())
     #backup_df = backup_df[(backup_df.Team == team) & (backup_df.Season == season)]
     # Filter the dataframe
@@ -294,6 +348,8 @@ if __name__=='__main__':
     st.markdown(f"<h2 style='text-align: center;'>{team} - {season}</h2>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
+        final_df = final_df[['Ideal', 'Current', 'Expiring Contract', 'Difference', 'PSI', 'Team', 'Season']]
+        final_df['PSI'] = final_df['PSI'].apply(lambda x: f"{x * 100:.1f}%")
         st.dataframe(final_df)
     with col2:
         buf = BytesIO()

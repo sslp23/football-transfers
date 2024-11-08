@@ -95,7 +95,6 @@ def difference_in_years(x):
     
     # Calculate difference in years
     today = pd.Timestamp.today()
-    print(today)
     difference_in_years = (x - today) / pd.Timedelta(days=365.25)  # Accounting for leap years
     
     # Return 1 if difference is less than 1 year, else 0
@@ -252,7 +251,7 @@ def get_overview_htb(htb):
         'Avg Age': x['AGE'].mean(),
         'Avg Past Season Goals': x['Past Season Goals'].mean(),
         'Most Common Leagues': ', '.join(x['League'].mode().values)
-    }), include_groups=False)[['Avg Fee', 'Avg Age', 'Avg Past Season Goals', 'Most Common Leagues']]
+    }))[['Avg Fee', 'Avg Age', 'Avg Past Season Goals', 'Most Common Leagues']]
     return ft#.groupby()
 
 def get_past_season_goals(player, season, df):

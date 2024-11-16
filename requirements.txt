@@ -9,3 +9,4 @@ google-auth
 numpy
 requests
 beautifulsoup4
+streamlit==1.29.0

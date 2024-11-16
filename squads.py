@@ -166,7 +166,7 @@ def main():
     if mode == 'update':
         seasons = seasons[-1:]
         
-    leagues = ['GB2', 'SER1', 'BRA1', 'AR1N', 'DK1', 'GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
+    leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1', 'GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")

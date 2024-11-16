@@ -15,6 +15,7 @@ import gspread
 from google.oauth2 import service_account
 import pandas as pd
 import json
+from data_update import *
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
@@ -408,4 +409,9 @@ if __name__=='__main__':
     with col2:
         fig = htb_donut_chart(htb)
         st.plotly_chart(fig, use_container_width=True)
+    
+    update_squads()
+    update_contracts()
+    update_tactics()
+    update_transfers()
     #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())

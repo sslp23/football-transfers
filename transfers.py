@@ -48,12 +48,15 @@ def parse_transfer_table(team_in, left=False):
         infos_df = pd.DataFrame(infos, columns = ['PLAYER_NAME', 'PLAYER_ID', 'AGE', 'NATIONALITY', 'POSITION', 'MARKET_VALUE_ON_TRANSFER', 'TEAM_JOINED', 'TEAM_JOINED_ID', 'FEE'])
     return infos_df 
 
-def get_transfer(league_code, seasons):
+def get_transfer(league_code, seasons, how='populate'):
     base_link = f'https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/{league_code}/plus/?saison_id='
 
     seasons_df = pd.DataFrame()
     for s in (seasons):
-        full_link = base_link+str(s)+'&s_w=&leihe=3&intern=0&intern=1'
+        if how == 'update':
+            full_link = base_link.split('?')[0]+'?s_w=&leihe=3&intern=0&intern=1'
+        else:
+            full_link = base_link+str(s)+'&s_w=&leihe=3&intern=0&intern=1'
         print(full_link)
         passed = False
         while not passed:
@@ -105,13 +108,15 @@ def main():
 
     leagues_df = pd.DataFrame()
     for l in tqdm(leagues):
-        a = get_transfer(l, seasons)
+        a = get_transfer(l, seasons, mode)
         leagues_df = pd.concat([leagues_df, a])
         
     if mode == 'update':
         old_df = pd.read_csv('data/full_transfers.csv')
-        old_df[old_df.SEASON != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
-        base_df = pd.concat([old_df, base_df])
+        
+        new_season = leagues_df.SEASON.values[-1]
+        old_df = old_df[~((old_df.SEASON == new_season))]
+        leagues_df = pd.concat([old_df, leagues_df])
     leagues_df.to_csv('data/full_transfers.csv', index=False)
 
 if __name__ == "__main__":

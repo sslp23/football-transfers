@@ -25,7 +25,7 @@ def find_contract_link(s, sns, league_code):
     return s.replace("/"+team_name, new_team_name).replace('startseite', 'berateruebersicht').split('saison_id')[0] + f"plus/1"
 
 #all teams links
-def get_links(league_code, seasons):
+def get_links_contracts(league_code, seasons):
     base_link = f"https://www.transfermarkt.co.uk/championship/startseite/wettbewerb/{league_code}/plus/?saison_id="#2021
     base = "https://www.transfermarkt.co.uk/"
     
@@ -96,7 +96,7 @@ def main():
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")
-        team_links =get_links(l, seasons)
+        team_links =get_links_contracts(l, seasons)
         tl = []
         for team in tqdm(team_links):
             passed = 0
@@ -114,7 +114,9 @@ def main():
     
     if mode == 'update':
         old_df = pd.read_csv('data/contract_agents_info.csv')
-        old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
+        
+        new_season = base_df.Season.values[-1]
+        old_df = old_df[~((old_df.Season == new_season) & (old_df.League.isin(leagues)))]
         base_df = pd.concat([old_df, base_df])
     base_df.to_csv('data/contract_agents_info.csv', index=False)
 

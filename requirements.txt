@@ -6,3 +6,6 @@ mplsoccer==1.2.2
 plotly==5.9.0
 gspread
 google-auth
+numpy
+requests
+beautifulsoup4

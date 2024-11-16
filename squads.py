@@ -48,22 +48,32 @@ def get_links(league_code, seasons):
         all_urls += (links) 
     return all_urls
 
-def parse_link_full(link):
+def parse_link_full(link, how='populate'):
     league_name = link.split('=')[1].split('%')[0]
     link = link.replace(league_name, '')
+    if how == 'update':
+        link = link.split('?')[0]
     return link
 
 #stats from squad
-def find_squad_stats(als):
+def find_squad_stats(als, how='populate'):
     team = als[0]
     link = als[1]
     season = link[-4:] + "-" + str(int(link[-2:])+1)
-    new_link = parse_link_full(link)
+    new_link = parse_link_full(link, how=how)
     url = new_link
     
     response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, "html.parser")
     
+    if how == 'update':
+        new_season = soup.find('div', {'class': 'inline-select'}).find('optgroup').text.split('\n')[1].split(' ')[1]
+        new_season = '20'+new_season.split('/')[0]+'-'+new_season.split('/')[1]
+        season = new_season
+
+        
+        #print(new_season, url)
+    #time.sleep(30309)
     team_links = soup.find_all("table", {"class": "items"})
     links = []
     
@@ -156,7 +166,7 @@ def main():
     if mode == 'update':
         seasons = seasons[-1:]
         
-    leagues = ['GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']#['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
+    leagues = ['GB2', 'SER1', 'BRA1', 'AR1N', 'DK1', 'GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")
@@ -166,7 +176,7 @@ def main():
             passed = 0
             while passed == 0:
                 try:
-                    tl.append(find_squad_stats(team))
+                    tl.append(find_squad_stats(team, how=mode))
                     passed = 1
                 except:
                     print(f'team {team} error - trying again')
@@ -177,9 +187,11 @@ def main():
         base_df = pd.concat([base_df, all_teams])
 
     if mode == 'update':
+        new_season = base_df.Season.values[-1]
         old_df = pd.read_csv('data/players_infos.csv')
-        old_df = old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]
+        old_df = old_df[~((old_df.Season == new_season) & (old_df.League.isin(leagues)))]
         base_df = pd.concat([old_df, base_df])
+    
     if mode == 'new_leagues':
         old_df = pd.read_csv('data/players_infos.csv')
         #old_df = old_df[old_df.Season != float(str(seasons[-1])+str(seasons[-1]+1)[-2:])]

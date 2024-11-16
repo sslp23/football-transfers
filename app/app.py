@@ -11,6 +11,34 @@ import numpy as np
 import time
 from matplotlib import colors
 
+import gspread
+from google.oauth2 import service_account
+import pandas as pd
+import json
+
+scopes = ["https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive"]
+json_file = "credentials-api.json"
+# Access GCP service account secrets
+gcp_secrets = (st.secrets["gcp_service_account"]['gcp_info'])
+
+# Convert to JSON string
+#gcp_secrets_json = json.dumps(gcp_secrets)
+
+@st.cache_data(ttl=86400, show_spinner=True)
+def reader(spreadsheet_name):
+    credentials = service_account.Credentials.from_service_account_info(gcp_secrets)
+    scoped_credentials = credentials.with_scopes(scopes)
+    gc = gspread.authorize(scoped_credentials)
+    spreadsheet = gc.open(spreadsheet_name)
+    
+    tab = spreadsheet.worksheet(spreadsheet_name)
+    data = tab.get_all_records()
+    df = pd.DataFrame(data)
+    return df
+
+#global_players_infos = 
+
 def calculate_signing_score(ideal_num_players, num_players, players_leaving, w1=1.0, w2=0.75):
     # Calculate the factors
     if ideal_num_players == 0:
@@ -101,8 +129,8 @@ def difference_in_years(x):
     return 1 if difference_in_years < 1 else 0
 
 def get_team_info(df, team, season):
-    tactics = pd.read_csv('data/tactical_systems.csv')
-    contracts  = pd.read_csv('data/contract_agents_info.csv')
+    tactics = reader('tactical_systems')#pd.read_csv('data/tactical_systems.csv')
+    contracts  = reader('contract_agents_info')#pd.read_csv('data/contract_agents_info.csv')
     contracts['Season'] = ['2024-25']*len(contracts)
 
     df = df.merge(contracts[['Player_ID','Season', 'Expires']], how='left', left_on=['PLAYER_ID', 'Season'], right_on=['Player_ID', 'Season'])
@@ -130,10 +158,10 @@ def get_team_info(df, team, season):
         ly_tactics.append(last_year_tactics)
     
     teams_df_train['LAST_YEAR_TACTICS'] = ly_tactics
-    tactics_pos = pd.read_csv('data/Target Score Chart - MPT.csv')
-    tactics_pos = tactics_pos.iloc[:, 1:]
-    tactics_pos.columns = [a.strip() for a in tactics_pos.iloc[0].values] 
-    tactics_pos = tactics_pos.iloc[1:]
+    tactics_pos = reader('target_score_chart')#pd.read_csv('data/Target Score Chart - MPT.csv')
+    #tactics_pos = tactics_pos.iloc[:, 1:]
+    tactics_pos.columns = [a.strip() for a in tactics_pos.columns.values] 
+    #tactics_pos = tactics_pos.iloc[1:]
 
     tactics_pos['Formation'] = tactics_pos.Formation.str.split(' ').str[0]
     tactics_pos['Ideal Number'] = tactics_pos['Ideal Number'].astype(float)
@@ -186,7 +214,7 @@ def transfer_type(x):
         return 'Paid'
 
 def get_htb(position, team, season):
-    transfers = pd.read_csv('data/full_transfers.csv')
+    transfers = reader('full_transfers')#pd.read_csv('data/full_transfers.csv')
     transfers['POS_CODE'] = transfers.POSITION.apply(lambda x: find_cap(x))
     transfers.POS_CODE = transfers.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
     transfers.POS_CODE = transfers.POS_CODE.str.replace('AM', 'CM')
@@ -265,15 +293,17 @@ def get_past_season_goals(player, season, df):
 
 
 if __name__=='__main__':
+    # Configure the dashboard
+    st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")
+
     # Load the data
-    df = pd.read_csv('data/players_infos.csv')
+    df = reader('players_infos')#pd.read_csv('data/players_infos.csv')
     df['POS_CODE'] = df.Position.apply(lambda x: find_cap(x))
     df.POS_CODE = df.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
     df.POS_CODE = df.POS_CODE.str.replace('AM', 'CM')
     df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
 
-    # Configure the dashboard
-    st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")
+    
 
     # Title
     st.sidebar.title("Transfers Overview")

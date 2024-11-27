@@ -19,7 +19,7 @@ from data_update import *
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
-json_file = "credentials-api.json"
+#json_file = "credentials-api.json"
 # Access GCP service account secrets
 gcp_secrets = (st.secrets["gcp_service_account"]['gcp_info'])
 
@@ -409,9 +409,10 @@ if __name__=='__main__':
     with col2:
         fig = htb_donut_chart(htb)
         st.plotly_chart(fig, use_container_width=True)
-    
-    update_squads()
-    update_contracts()
-    update_tactics()
-    update_transfers()
-    #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
+    if st.button("Update data"):
+        update_squads()
+        update_contracts()
+        update_tactics()
+        update_transfers()
+        st.success("All data updated successfully!")
+        #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())

@@ -7,6 +7,7 @@ from squads import *
 from contracts import *
 from tactics import *
 from transfers import *
+from stqdm import stqdm
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
@@ -48,10 +49,10 @@ def update_transfers():
     leagues = ['GB1', 'L1', 'FR1', 'ES1', 'PO1', 'TR1', 'TS1', 'NL1', 'BE1', 'IT1']
 
     leagues_df = pd.DataFrame()
-    for l in tqdm(leagues):
+    for l in stqdm(leagues, desc='Updating Transfers'):
         a = get_transfer(l, seasons, mode)
         leagues_df = pd.concat([leagues_df, a])
-        
+    
     if mode == 'update':
         old_df = reader('full_transfers')#pd.read_csv('data/full_transfers.csv')
         
@@ -78,7 +79,7 @@ def update_tactics():
         target_teams = target_teams[target_teams.Season == cur_season]
         old_teams = reader('tactical_systems')
 
-    tqdm.pandas()
+    stqdm.pandas(desc='Updating Tactics Info')
     systems_df = target_teams.progress_apply(lambda x: get_tactical_systems(x['Season'], x['TEAM_ID'], x['Team'], x['League']), axis=1)
     if how == 'update':
         new_systems = pd.concat(systems_df.values.tolist())
@@ -94,7 +95,7 @@ def update_contracts():
     leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'TS1', 'NL1', 'BE1']
 
     base_df = pd.DataFrame()
-    for l in leagues:
+    for l in stqdm(leagues, desc='Updating Contract Info'):
         print(f"getting {l} data from {seasons} - {mode} mode")
         team_links =get_links_contracts(l, seasons)
         tl = []
@@ -111,6 +112,7 @@ def update_contracts():
         all_teams['League'] = [l]*len(all_teams)
 
         base_df = pd.concat([base_df, all_teams])
+
     writer('contract_agents_info', base_df.fillna(''))
     #base_df.to_csv('data/contract_agents_info.csv', index=False)
 
@@ -126,7 +128,8 @@ def update_squads():
 
     leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1', 'GB2', 'SER1', 'BRA1', 'AR1N', 'DK1',]
     base_df = pd.DataFrame()
-    for l in leagues:
+    
+    for l in stqdm(leagues, desc='Updating Squads'):
         print(f"getting {l} data from {seasons} - {mode} mode")
         team_links =get_links(l, seasons)
         tl = []
@@ -144,6 +147,7 @@ def update_squads():
 
         base_df = pd.concat([base_df, all_teams])
 
+    
     new_season = base_df.Season.values[-1]
     old_df = reader('players_infos')
     old_df = old_df[~((old_df.Season == new_season) & (old_df.League.isin(leagues)))]

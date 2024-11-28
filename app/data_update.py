@@ -37,7 +37,7 @@ def writer(spreadsheet_name, df):
     tab.clear()
     tab.update(values)
 
-@st.cache_data(ttl=86400, show_spinner=True)
+#@st.cache_data(ttl=86400, show_spinner=True)
 def update_transfers():
     seasons = np.arange(2017, 2025).tolist()    
 
@@ -62,7 +62,7 @@ def update_transfers():
     writer('full_transfers', leagues_df.fillna(''))
     #leagues_df.to_csv('data/full_transfers.csv', index=False)
 
-@st.cache_data(ttl=86400, show_spinner=True)
+#@st.cache_data(ttl=86400, show_spinner=True)
 def update_tactics():
     df = reader('players_infos')
     target_teams = df[['Season', 'TEAM_ID', 'Team', 'League']].drop_duplicates()
@@ -87,7 +87,7 @@ def update_tactics():
         full_systems['Most Used System'] = full_systems['Most Used System'].apply(lambda x: str(x))
         writer('tactical_systems', full_systems.fillna(''))
 
-@st.cache_data(ttl=86400, show_spinner=True)
+#@st.cache_data(ttl=86400, show_spinner=True)
 def update_contracts():
     seasons = np.arange(2024, 2025).tolist()
     mode = 'update'
@@ -114,7 +114,7 @@ def update_contracts():
     writer('contract_agents_info', base_df.fillna(''))
     #base_df.to_csv('data/contract_agents_info.csv', index=False)
 
-@st.cache_data(ttl=86400, show_spinner=True)
+#@st.cache_data(ttl=86400, show_spinner=True)
 def update_squads():
     seasons = np.arange(2017, 2025).tolist()
 

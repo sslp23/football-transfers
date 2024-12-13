@@ -16,6 +16,7 @@ from google.oauth2 import service_account
 import pandas as pd
 import json
 from data_update import *
+from stqdm import stqdm
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
@@ -292,48 +293,7 @@ def get_past_season_goals(player, season, df):
         return np.nan
     #df[df.past_season
 
-
-if __name__=='__main__':
-    # Configure the dashboard
-    st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")
-
-    # Load the data
-    df = reader('players_infos')#pd.read_csv('data/players_infos.csv')
-    df['POS_CODE'] = df.Position.apply(lambda x: find_cap(x))
-    df.POS_CODE = df.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
-    df.POS_CODE = df.POS_CODE.str.replace('AM', 'CM')
-    df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
-
-    
-
-    # Title
-    st.sidebar.title("Transfers Overview")
-
-    #df['Season'] = df.Season.astype(int).astype(str)
-    #df.Season = df.Season.apply(lambda x: x[:4]+'-'+x[4:])
-    # Sidebar filters
-    leagues_dict = {
-        'GB1': 'Premier League',
-        'L1': 'Bundesliga',
-        'PO1': 'Primeira Liga',
-        'FR1': 'Ligue 1',
-        'IT1': 'Serie A',
-        'ES1': 'La Liga',
-        'TR1': 'Süper Lig',
-        'NL1': 'Eredivisie',
-        'BE1': 'Jupiler Pro League',
-        'TS1': 'Czech League'
-    }
-    
-    df['League'] = df['League'].replace(leagues_dict)
-    season = st.sidebar.selectbox("Select Season", df['Season'].unique().tolist()[::-1])
-    league = st.sidebar.selectbox("Select League", df[(df.League.isin(leagues_dict.values())) & (df.Season == season)].League.unique())
-    team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
-    #option = st.sidebar.selectbox("Select Option", ["ideal", "current", "difference"])
-
-    teams_df_info = get_team_info(df, team=team, season=season)
-    team_id = teams_df_info.TEAM_ID.values[-1]
-    base_cols = ['Season', 'Team']
+def preprocess_team_infos(teams_df_info):
     backup_df = teams_df_info[(teams_df_info.Team == team) & (teams_df_info.Season == season)]
 
     ideal_cols = [a for a in backup_df if '_ideal' in a ]
@@ -367,52 +327,119 @@ if __name__=='__main__':
     final_df['Difference'] = final_df['Current'] - final_df['Ideal']
     
     final_df['PSI'] = final_df.apply(lambda x: calculate_signing_score(x['Ideal'], x['Current'], x['Expiring Contract']), axis=1)
-    hmap = heatmap_maker(final_df.reset_index())
-    #backup_df = backup_df[(backup_df.Team == team) & (backup_df.Season == season)]
-    # Filter the dataframe
-    #filtered_df = df[(df['Season'] == season) & (df['Team'] == team)]
+    return final_df
 
-    # Display the filtered dataframe
-    
-    #st.subheader("Squad Stats")
-    st.markdown(f"<h2 style='text-align: center;'>{team} - {season}</h2>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        final_df = final_df[['Ideal', 'Current', 'Expiring Contract', 'Difference', 'PSI', 'Team', 'Season']]
-        final_df['PSI'] = final_df['PSI'].apply(lambda x: f"{x * 100:.1f}%")
-        st.dataframe(final_df)
-    with col2:
-        buf = BytesIO()
-        hmap.savefig(buf, format="png")
-        buf.seek(0)
-        st.image(buf, caption="Position's heatmap")
+if __name__=='__main__':
+    # Configure the dashboard
+    st.set_page_config(page_title="Transfers Overview", page_icon="⚽", layout="wide")
 
-    st.markdown(f"<h2 style='text-align: center;'>Historical Transfers Behavior</h2>", unsafe_allow_html=True)
+    # Load the data
+    df = reader('players_infos')#pd.read_csv('data/players_infos.csv')
+    df['POS_CODE'] = df.Position.apply(lambda x: find_cap(x))
+    df.POS_CODE = df.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
+    df.POS_CODE = df.POS_CODE.str.replace('AM', 'CM')
     df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
-    position = st.selectbox('Position', df.POS_CODE.unique())
 
-    htb = get_htb(position, team_id, season)
-    team_infos = df[['TEAM_ID', 'League', 'Season']]
-    htb = htb.merge(team_infos, how='left', left_on=['TEAM_LEFT_ID', 'SEASON'], right_on=['TEAM_ID', 'Season'])
+    
 
-    htb['Past Season Goals'] = htb.apply(lambda x: get_past_season_goals(x['PLAYER_ID'], x['SEASON'], df), axis=1)
-    htb.drop(['Season', 'TEAM_LEFT_ID', 'TEAM_ID', 'PLAYER_ID'], axis=1, inplace=True)
-    htb = htb.drop_duplicates()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.caption("Signed players")
-        st.dataframe(htb)
-        st.caption("Bought players overview")
-        overview_htb = get_overview_htb(htb)
-        st.dataframe(overview_htb)
+    # Title
+    st.sidebar.title("Transfers Overview")
+    tab = st.sidebar.radio(
+        "Choose a Tab:",
+        ("Specific Team", "General")
+    )
+
+    #df['Season'] = df.Season.astype(int).astype(str)
+    #df.Season = df.Season.apply(lambda x: x[:4]+'-'+x[4:])
+    # Sidebar filters
+    leagues_dict = {
+        'GB1': 'Premier League',
+        'L1': 'Bundesliga',
+        'PO1': 'Primeira Liga',
+        'FR1': 'Ligue 1',
+        'IT1': 'Serie A',
+        'ES1': 'La Liga',
+        'TR1': 'Süper Lig',
+        'NL1': 'Eredivisie',
+        'BE1': 'Jupiler Pro League',
+        'TS1': 'Czech League'
+    }
+    df['League'] = df['League'].replace(leagues_dict)
+    if tab == 'Specific Team':
+        season = st.sidebar.selectbox("Select Season", df['Season'].unique().tolist()[::-1])
+        league = st.sidebar.selectbox("Select League", df[(df.League.isin(leagues_dict.values())) & (df.Season == season)].League.unique())
+        team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
+        #option = st.sidebar.selectbox("Select Option", ["ideal", "current", "difference"])
         
-    with col2:
-        fig = htb_donut_chart(htb)
-        st.plotly_chart(fig, use_container_width=True)
-    if st.button("Update data"):
-        update_squads()
-        update_contracts()
-        update_tactics()
-        update_transfers()
-        st.success("All data updated successfully!")
-        #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
+        teams_df_info = get_team_info(df, team=team, season=season)
+        team_id = teams_df_info.TEAM_ID.values[-1]
+        base_cols = ['Season', 'Team']
+        final_df = preprocess_team_infos(teams_df_info)
+
+        hmap = heatmap_maker(final_df.reset_index())
+        #backup_df = backup_df[(backup_df.Team == team) & (backup_df.Season == season)]
+        # Filter the dataframe
+        #filtered_df = df[(df['Season'] == season) & (df['Team'] == team)]
+
+        # Display the filtered dataframe
+        
+        #st.subheader("Squad Stats")
+        st.markdown(f"<h2 style='text-align: center;'>{team} - {season}</h2>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            final_df = final_df[['Ideal', 'Current', 'Expiring Contract', 'Difference', 'PSI', 'Team', 'Season']]
+            final_df['PSI'] = final_df['PSI'].apply(lambda x: f"{x * 100:.1f}%")
+            st.dataframe(final_df)
+        with col2:
+            buf = BytesIO()
+            hmap.savefig(buf, format="png")
+            buf.seek(0)
+            st.image(buf, caption="Position's heatmap")
+
+        st.markdown(f"<h2 style='text-align: center;'>Historical Transfers Behavior</h2>", unsafe_allow_html=True)
+        df = df[~df.POS_CODE.isin(['A', 'D', 'M'])]
+        position = st.selectbox('Position', df.POS_CODE.unique())
+
+        htb = get_htb(position, team_id, season)
+        team_infos = df[['TEAM_ID', 'League', 'Season']]
+        htb = htb.merge(team_infos, how='left', left_on=['TEAM_LEFT_ID', 'SEASON'], right_on=['TEAM_ID', 'Season'])
+
+        htb['Past Season Goals'] = htb.apply(lambda x: get_past_season_goals(x['PLAYER_ID'], x['SEASON'], df), axis=1)
+        htb.drop(['Season', 'TEAM_LEFT_ID', 'TEAM_ID', 'PLAYER_ID'], axis=1, inplace=True)
+        htb = htb.drop_duplicates()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.caption("Signed players")
+            st.dataframe(htb)
+            st.caption("Bought players overview")
+            overview_htb = get_overview_htb(htb)
+            st.dataframe(overview_htb)
+            
+        with col2:
+            fig = htb_donut_chart(htb)
+            st.plotly_chart(fig, use_container_width=True)
+        if st.button("Update data"):
+            update_squads()
+            update_contracts()
+            update_tactics()
+            update_transfers()
+            st.success("All data updated successfully!")
+            #team = st.sidebar.selectbox("Select Team", df[(df['Season'] == season) & (df['League'] == league)]['Team'].unique())
+
+    else:
+        season = st.sidebar.selectbox("Select Season", df['Season'].unique().tolist()[::-1])
+        league = st.sidebar.selectbox("Select League", df[(df.League.isin(leagues_dict.values())) & (df.Season == season)].League.unique())
+
+        res_df = df[(df['Season'] == season) & (df['League'] == league)]#['Team']
+        
+        teams = res_df['Team'].unique()#[0]
+        goal_infos = pd.DataFrame()
+        
+        for team in stqdm(teams, desc='Calculating General PSI'):
+            teams_df_info = get_team_info(df, team=team, season=season)
+
+            #team_id = teams_df_info.TEAM_ID.values[-1]
+            final_df = preprocess_team_infos(teams_df_info).reset_index()
+            infos_int = final_df[['Team', 'Position', 'PSI']]
+            goal_infos = pd.concat([goal_infos,infos_int])
+        st.dataframe(goal_infos.sort_values('PSI', ascending=False).reset_index(drop=True))

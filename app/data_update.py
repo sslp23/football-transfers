@@ -147,7 +147,7 @@ def update_squads():
 
         base_df = pd.concat([base_df, all_teams])
 
-    
+    base_df = base_df[((base_df.Appearences > 10) & (base_df['#']=='-')) | (base_df['#']!='-')]
     new_season = base_df.Season.values[-1]
     old_df = reader('players_infos')
     old_df = old_df[~((old_df.Season == new_season) & (old_df.League.isin(leagues)))]

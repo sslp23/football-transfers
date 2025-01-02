@@ -185,7 +185,7 @@ def main():
         all_teams['League'] = [l]*len(all_teams)
 
         base_df = pd.concat([base_df, all_teams])
-
+    base_df = base_df[((base_df.Appearences > 10) & (base_df['#']=='-')) | (base_df['#']!='-')]
     if mode == 'update':
         new_season = base_df.Season.values[-1]
         old_df = pd.read_csv('data/players_infos.csv')

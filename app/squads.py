@@ -125,7 +125,23 @@ def find_squad_stats(als, how='populate'):
                     player.append(cell.find('a')['title'])
                     
                 else:
-                    player.append(cell.text)
+                    value = cell.text
+                    if cell.find('div'):#    
+                        if cell.find('div')['class']: 
+                            if cell.find('div')['class'][0] == 'rn_nummer':
+                                if cell.text == '-':
+                                    span = row.find('span', class_='wechsel-kader-wappen hide-for-small')
+                                    if span:
+                                        a_tag = span.find_next('a')
+                                        if a_tag and 'title' in a_tag.attrs:
+                                            #print(a_tag['title'])
+                                            value = '0'
+                                    else:
+                                        value = cell.text
+                                else:
+                                    value = cell.text
+                    
+                    player.append(value)
 
             
 

@@ -48,7 +48,7 @@ def calculate_signing_score(ideal_num_players, num_players, players_leaving, w1=
 
     # Calculate the factors
     player_gap = (num_players - ideal_num_players) / ideal_num_players
-    leaving_factor = (players_leaving-ideal_num_players) / ideal_num_players
+    leaving_factor = (-players_leaving)/ideal_num_players#(players_leaving-ideal_num_players) / ideal_num_players
 
     # Calculate the raw score
     raw_score = w1 * player_gap + w2 * leaving_factor
@@ -140,14 +140,17 @@ def get_team_info(df, team, season):
     df['Expires'] = pd.to_datetime(df['Expires'])
     df['Expiring'] = df['Expires'].apply(lambda x: difference_in_years(x))
 
+    
     teams_df = df[['Season', 'TEAM_ID', 'Team', 'League', 'Expires','Expiring', 'POS_CODE']]
     
     #tactics['Season'] = tactics.Season.astype(int).astype(str)
     #tactics.Season = tactics.Season.apply(lambda x: x[:4]+'-'+x[4:])
 
+    tactics = tactics.groupby(['Team', 'Season']).tail(1)#tactics.to_csv('research/test.csv', index=False)
     teams_df = teams_df.merge(tactics[['Coach', 'Most Used System', 'Season', 'Team_ID']], how='left', left_on=['Season', 'TEAM_ID'], right_on=['Season', 'Team_ID']).drop('Team_ID', axis=1)
     
     teams_df_train = teams_df[(teams_df.Season == season) & (teams_df.Team == team)]#[teams_df.Season>'201718']
+    #print(len(teams_df_train))
     teams_df_train = (teams_df_train.drop_duplicates())
     ly_tactics = []
     for i, vals in tqdm(teams_df_train.iterrows()):
@@ -308,6 +311,7 @@ def preprocess_team_infos(teams_df_info):
     df_current['positions'] = positions_current
     final_df = df_ideal.merge(df_current, how='left', on='positions')
     
+    #teams_df_info.to_csv('research/test.csv', index=False)
     expiring_players = teams_df_info.drop_duplicates().groupby('POS_CODE')['Expiring'].sum()
     expiring_players = expiring_players.to_frame('Expiring Contract').reset_index()
     expiring_players.columns = ['Position', 'Expiring Contract']

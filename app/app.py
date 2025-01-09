@@ -41,14 +41,14 @@ def reader(spreadsheet_name):
 
 #global_players_infos = 
 
-def calculate_signing_score(ideal_num_players, num_players, players_leaving, w1=1.0, w2=0.75):
+def calculate_signing_score(ideal_num_players, num_players, players_leaving, w1=1.0, w2=1):
     # Calculate the factors
     if ideal_num_players == 0:
         return 0  # or an alternative score, depending on the context
 
     # Calculate the factors
     player_gap = (num_players - ideal_num_players) / ideal_num_players
-    leaving_factor = players_leaving / ideal_num_players
+    leaving_factor = (players_leaving-ideal_num_players) / ideal_num_players
 
     # Calculate the raw score
     raw_score = w1 * player_gap + w2 * leaving_factor

@@ -27,7 +27,7 @@ gcp_secrets = (st.secrets["gcp_service_account"]['gcp_info'])
 # Convert to JSON string
 #gcp_secrets_json = json.dumps(gcp_secrets)
 
-@st.cache_data(ttl=86400, show_spinner=True)
+@st.cache_data(ttl=3600, show_spinner=True)
 def reader(spreadsheet_name):
     credentials = service_account.Credentials.from_service_account_info(gcp_secrets)
     scoped_credentials = credentials.with_scopes(scopes)

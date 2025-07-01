@@ -62,6 +62,7 @@ def find_squad_stats(als, how='populate'):
     season = link[-4:] + "-" + str(int(link[-2:])+1)
     new_link = parse_link_full(link, how=how)
     url = new_link
+    print(url)
     
     response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -174,21 +175,23 @@ def find_squad_stats(als, how='populate'):
 def main():
     #seasons -> from 2013 / 2024
     #if running in mode update, it will get only the last season data
-    seasons = np.arange(2017, 2025).tolist()
+    seasons = np.arange(2017, 2026).tolist()
 
     #python squads.py update
     #python squads.py populate -> default
     mode = sys.argv[1]
     if mode == 'update':
         seasons = seasons[-1:]
-        
-    leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1', 'GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']
+    
+    
+    leagues = ['GB1']#, 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1', 'GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")
         team_links =get_links(l, seasons)
         tl = []
         for team in tqdm(team_links):
+            
             passed = 0
             while passed == 0:
                 try:
@@ -201,7 +204,8 @@ def main():
         all_teams['League'] = [l]*len(all_teams)
 
         base_df = pd.concat([base_df, all_teams])
-    base_df = base_df[((base_df.Appearences > 10) & (base_df['#']=='-')) | (base_df['#']!='-')]
+    
+    #base_df = base_df[((base_df['#']=='-')) | (base_df['#']!='-')]
     if mode == 'update':
         new_season = base_df.Season.values[-1]
         old_df = pd.read_csv('data/players_infos.csv')

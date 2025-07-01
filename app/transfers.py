@@ -98,7 +98,7 @@ def get_transfer(league_code, seasons, how='populate'):
             
 
 def main():
-    seasons = np.arange(2017, 2025).tolist()    
+    seasons = np.arange(2017, 2026).tolist()    
 
     mode = sys.argv[1]
     if mode == 'update':

@@ -29,14 +29,7 @@ gcp_secrets = (st.secrets["gcp_service_account"]['gcp_info'])
 
 @st.cache_data(ttl=3600, show_spinner=True)
 def reader(spreadsheet_name):
-    credentials = service_account.Credentials.from_service_account_info(gcp_secrets)
-    scoped_credentials = credentials.with_scopes(scopes)
-    gc = gspread.authorize(scoped_credentials)
-    spreadsheet = gc.open(spreadsheet_name)
-    
-    tab = spreadsheet.worksheet(spreadsheet_name)
-    data = tab.get_all_records()
-    df = pd.DataFrame(data)
+    df = pd.read_csv('data/'+spreadsheet_name+'.csv')
     return df
 
 #global_players_infos = 
@@ -164,11 +157,17 @@ def get_team_info(df, team, season):
     
     teams_df_train['LAST_YEAR_TACTICS'] = ly_tactics
     tactics_pos = reader('target_score_chart')#pd.read_csv('data/Target Score Chart - MPT.csv')
-    #tactics_pos = tactics_pos.iloc[:, 1:]
+    
+    tactics_pos = tactics_pos.iloc[:, 1:]
+    cols = tactics_pos.iloc[0]
+    tactics_pos.columns = cols
+    tactics_pos = tactics_pos.iloc[1:]
     tactics_pos.columns = [a.strip() for a in tactics_pos.columns.values] 
-    #tactics_pos = tactics_pos.iloc[1:]
+    
 
+    
     tactics_pos['Formation'] = tactics_pos.Formation.str.split(' ').str[0]
+    
     tactics_pos['Ideal Number'] = tactics_pos['Ideal Number'].astype(float)
     #time.sleep(102039)
     tactics_df = pd.pivot_table(tactics_pos, index='Formation', columns='Position', values='Ideal Number')

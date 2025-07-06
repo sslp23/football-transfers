@@ -16,27 +16,11 @@ json_file = "credentials-api.json"
 gcp_secrets = (st.secrets["gcp_service_account"]['gcp_info'])
 
 def reader(spreadsheet_name):
-    credentials = service_account.Credentials.from_service_account_info(gcp_secrets)
-    scoped_credentials = credentials.with_scopes(scopes)
-    gc = gspread.authorize(scoped_credentials)
-    spreadsheet = gc.open(spreadsheet_name)
-    
-    tab = spreadsheet.worksheet(spreadsheet_name)
-    data = tab.get_all_records()
-    df = pd.DataFrame(data)
+    df = pd.read_csv('data/'+spreadsheet_name+'.csv')
     return df
 
 def writer(spreadsheet_name, df):
-    credentials = service_account.Credentials.from_service_account_info(gcp_secrets)
-    scoped_credentials = credentials.with_scopes(scopes)
-    gc = gspread.authorize(scoped_credentials)
-    spreadsheet = gc.open(spreadsheet_name)
-    
-    tab = spreadsheet.worksheet(spreadsheet_name)
-
-    values = [df.columns.tolist()] + df.values.tolist()
-    tab.clear()
-    tab.update(values)
+    df.to_csv(f'data/{spreadsheet_name}.csv')
 
 #@st.cache_data(ttl=86400, show_spinner=True)
 def update_transfers():

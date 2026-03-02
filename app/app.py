@@ -220,6 +220,7 @@ def transfer_type(x):
 
 def get_htb(position, team, season):
     transfers = reader('full_transfers')#pd.read_csv('data/full_transfers.csv')
+    
     transfers['POS_CODE'] = transfers.POSITION.apply(lambda x: find_cap(x))
     transfers.POS_CODE = transfers.POS_CODE.str.replace('CF', 'ST').str.replace('SS', 'ST')
     transfers.POS_CODE = transfers.POS_CODE.str.replace('AM', 'CM')
@@ -227,7 +228,7 @@ def get_htb(position, team, season):
 
     #season = float(season[:4]+season[5:])
 
-    int_transfer = transfers[(transfers.SEASON <= season) & (transfers.TEAM_JOINED_ID == team) & (transfers.POS_CODE == position)]
+    int_transfer = transfers[(transfers.TEAM_JOINED_ID == team) & (transfers.POS_CODE == position)]
     
     sel_transfer = int_transfer[['PLAYER_NAME', 'AGE', 'FEE', 'POS_CODE', 'SEASON', 'TEAM_LEFT_ID', 'PLAYER_ID']].sort_values('SEASON')
     sel_transfer = sel_transfer[~sel_transfer.FEE.str.contains('End of loan')].drop_duplicates().reset_index(drop=True)

@@ -32,7 +32,14 @@ def get_links(league_code, seasons):
     for s in (seasons):
         url =f"https://www.transfermarkt.co.uk/championship/startseite/wettbewerb/{league_code}/plus/?saison_id="+str(s)
         print(url)
-        response = requests.get(url, headers=headers)
+        status_code = -1
+        while status_code != 200:
+            response = requests.get(url, headers=headers)
+            status_code = response.status_code
+            if status_code!= 200:
+                print('error')
+                time.sleep(5)
+        
         soup = BeautifulSoup(response.content, "html.parser")
         
         team_links = soup.find_all("table", {"class": "items"})
@@ -174,7 +181,7 @@ def find_squad_stats(als, how='populate'):
 def main():
     #seasons -> from 2013 / 2024
     #if running in mode update, it will get only the last season data
-    seasons = np.arange(2017, 2025).tolist()
+    seasons = np.arange(2019, 2026).tolist()
 
     #python squads.py update
     #python squads.py populate -> default
@@ -183,10 +190,13 @@ def main():
         seasons = seasons[-1:]
         
     leagues = ['GB1', 'L1', 'PO1', 'FR1', 'IT1', 'ES1', 'TR1', 'NL1', 'BE1', 'TS1', 'GB2', 'SER1', 'BRA1', 'AR1N', 'DK1']
+    
+    leagues = ['L1', 'GB1', 'FR1', 'ES1', 'IT1', 'GB2', 'PO1', 'BE1', 'NL1', 'A1', 'C1']
+    leagues = ['DK1', 'BRA1', 'SC1', 'NO1', 'UKR1', 'TR1']
     base_df = pd.DataFrame()
     for l in leagues:
         print(f"getting {l} data from {seasons} - {mode} mode")
-        team_links =get_links(l, seasons)
+        team_links = get_links(l, seasons)
         tl = []
         for team in tqdm(team_links):
             passed = 0
@@ -200,8 +210,10 @@ def main():
         all_teams = pd.concat(tl)
         all_teams['League'] = [l]*len(all_teams)
 
+        all_teams.to_csv(f'../aux_files/{l}_temp_file.csv', index=False)
         base_df = pd.concat([base_df, all_teams])
-    base_df = base_df[((base_df.Appearences > 10) & (base_df['#']=='-')) | (base_df['#']!='-')]
+    
+    #base_df = base_df[((base_df.Appearences > 10) & (base_df['#']=='-')) | (base_df['#']!='-')]
     if mode == 'update':
         new_season = base_df.Season.values[-1]
         old_df = pd.read_csv('data/players_infos.csv')

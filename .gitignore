@@ -1,3 +1,4 @@
 credentials-api.json
 secrets.toml
 .streamlit/
+aux_files/
